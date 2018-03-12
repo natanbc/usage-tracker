@@ -17,7 +17,7 @@ import java.util.stream.Stream;
  * @param <K> The type of the key used to identify each tracker.
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
-public abstract class TrackerGroup<K> {
+public class TrackerGroup<K> {
     private final ConcurrentHashMap<K, UsageTracker<K>> map = new ConcurrentHashMap<>();
     private final ScheduledExecutorService executor;
     private final boolean recursiveIncrements;
