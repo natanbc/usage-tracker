@@ -70,6 +70,7 @@ bintray {
         name = 'usage-tracker'
         licenses = ['Apache-2.0']
         vcsUrl = 'https://github.com/natanbc/usage-tracker.git'
+        publish = true
         version {
             name = project.version
             released = new Date()
