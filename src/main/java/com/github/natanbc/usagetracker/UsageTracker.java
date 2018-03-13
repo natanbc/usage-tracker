@@ -79,7 +79,7 @@ public class UsageTracker<K> {
      * @return The child tracker for the given key. Never null.
      */
     @Nonnull
-    public UsageTracker child(K key) {
+    public UsageTracker<K> child(K key) {
         return children.computeIfAbsent(key, unused->new UsageTracker<>(this, key, recursiveIncrement));
     }
 
