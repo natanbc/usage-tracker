@@ -3,6 +3,7 @@ package com.github.natanbc.usagetracker;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -81,6 +82,16 @@ public class UsageTracker<K> {
     @Nonnull
     public UsageTracker<K> child(K key) {
         return children.computeIfAbsent(key, unused->new UsageTracker<>(this, key, recursiveIncrement));
+    }
+
+    /**
+     * Returns the map of the existing child trackers. Modifications made to this map will have effect on this tracker.
+     *
+     * @return The map used to store child trackers. Never null.
+     */
+    @Nonnull
+    public Map<K, UsageTracker<K>> children() {
+        return children;
     }
 
     /**
