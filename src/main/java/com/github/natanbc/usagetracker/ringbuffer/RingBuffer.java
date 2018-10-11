@@ -33,6 +33,9 @@ public interface RingBuffer {
     /**
      * Returns the sum of the last {@code amount} elements in this buffer.
      *
+     * @param amount How many entries to count. If greater than {@link #size() size},
+     *               the size is used instead.
+     *
      * @return The sum of the last {@code amount} elements in this buffer.
      */
     @CheckReturnValue

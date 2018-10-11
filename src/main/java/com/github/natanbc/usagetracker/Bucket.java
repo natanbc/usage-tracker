@@ -34,6 +34,7 @@ public interface Bucket {
      *
      * @param all Data to sort. Cannot be null.
      * @param amount Maximum number of elements in the returned stream.
+     * @param <K> Type of the keys for the provided trackers.
      *
      * @return A stream of up to {@code amount} elements sorted from high to low.
      */
@@ -48,6 +49,7 @@ public interface Bucket {
      *
      * @param all Data to sort. Cannot be null.
      * @param amount Maximum number of elements in the returned stream.
+     * @param <K> Type of the keys for the provided trackers.
      *
      * @return A stream of up to {@code amount} elements sorted from low to high.
      */
