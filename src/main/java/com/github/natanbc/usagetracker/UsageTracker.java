@@ -84,9 +84,20 @@ public class UsageTracker<K> {
      * <br>If enabled, also increments the parent's number of usages until the root tracker is updated.
      */
     public void increment() {
-        if(recursiveIncrement && parent != null) parent.increment();
-        second.incrementAndGet();
-        total.incrementAndGet();
+        increment(1);
+    }
+
+    /**
+     * Increments the number of usages in this tracker.
+     *
+     * <br>If enabled, also increments the parent's number of usages until the root tracker is updated.
+     *
+     * @param amount Amount of uses to increment.
+     */
+    public void increment(int amount) {
+        if(recursiveIncrement && parent != null) parent.increment(amount);
+        second.addAndGet(amount);
+        total.addAndGet(amount);
     }
 
     /**
