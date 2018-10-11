@@ -12,13 +12,13 @@ import java.util.function.ToLongFunction;
 public enum DefaultBucket implements Bucket {
     LAST_SECOND(UsageTracker::secondUsages),
     LAST_MINUTE(UsageTracker::minuteUsages),
-    LAST_5_MINUTES(tracker -> tracker.hourBuffer().sumLast(5)),
-    LAST_15_MINUTES(tracker -> tracker.hourBuffer().sumLast(15)),
-    LAST_30_MINUTES(tracker -> tracker.hourBuffer().sumLast(30)),
+    LAST_5_MINUTES(tracker -> tracker.hourBuffer().sumLast(4) + tracker.minuteUsages()),
+    LAST_15_MINUTES(tracker -> tracker.hourBuffer().sumLast(14) + tracker.minuteUsages()),
+    LAST_30_MINUTES(tracker -> tracker.hourBuffer().sumLast(29) + tracker.minuteUsages()),
     LAST_HOUR(UsageTracker::hourlyUsages),
-    LAST_2_HOURS(tracker -> tracker.dayBuffer().sumLast(2)),
-    LAST_6_HOURS(tracker -> tracker.dayBuffer().sumLast(6)),
-    LAST_12_HOURS(tracker -> tracker.dayBuffer().sumLast(12)),
+    LAST_2_HOURS(tracker -> tracker.dayBuffer().sumLast(1) + tracker.hourlyUsages()),
+    LAST_6_HOURS(tracker -> tracker.dayBuffer().sumLast(5) + tracker.hourlyUsages()),
+    LAST_12_HOURS(tracker -> tracker.dayBuffer().sumLast(11) + tracker.hourlyUsages()),
     LAST_DAY(UsageTracker::dailyUsages),
     TOTAL(UsageTracker::totalUsages);
 
