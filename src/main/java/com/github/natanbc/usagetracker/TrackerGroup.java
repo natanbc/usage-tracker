@@ -1,5 +1,8 @@
 package com.github.natanbc.usagetracker;
 
+import com.github.natanbc.usagetracker.ringbuffer.IntRingBuffer;
+import com.github.natanbc.usagetracker.ringbuffer.RingBuffer;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -18,9 +21,9 @@ import java.util.stream.Stream;
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class TrackerGroup<K> {
-    private final ConcurrentHashMap<K, UsageTracker<K>> map = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService executor;
-    private final boolean recursiveIncrements;
+    protected final ConcurrentHashMap<K, UsageTracker<K>> map = new ConcurrentHashMap<>();
+    protected final ScheduledExecutorService executor;
+    protected final boolean recursiveIncrements;
 
     /**
      * Creates a new tracker group with a given executor.
@@ -109,7 +112,7 @@ public class TrackerGroup<K> {
      */
     @Nonnull
     public UsageTracker tracker(@Nonnull K key) {
-        return map.computeIfAbsent(key, unused->new UsageTracker<>(null, key, recursiveIncrements));
+        return map.computeIfAbsent(key, k -> createTracker(null, k));
     }
 
     /**
@@ -172,5 +175,35 @@ public class TrackerGroup<K> {
      */
     public long total(Bucket bucket) {
         return trackers().values().stream().mapToLong(bucket::amount).sum();
+    }
+
+    /**
+     * Creates a new tracker for the given key.
+     *
+     * @param parent Parent for the new tracker.
+     * @param key Key for the new tracker.
+     *
+     * @return A new tracker.
+     *
+     * @implNote This method does not register the tracker, so it should not be used
+     * directly. Use {@link #tracker(Object) tracker(K)} instead. This method is
+     * available so subclasses can provide a different tracker implementation.
+     */
+    public UsageTracker<K> createTracker(UsageTracker<K> parent, K key) {
+        return new UsageTracker<>(this, parent, key, recursiveIncrements);
+    }
+
+    /**
+     * Creates a new ring buffer with a given size.
+     *
+     * @param size Size for the new buffer.
+     *
+     * @return A new ring buffer.
+     *
+     * @implNote  This method should not be used directly, it's available so
+     * subclasses can provide a different buffer implementation.
+     */
+    public RingBuffer createRingBuffer(int size) {
+        return new IntRingBuffer(size);
     }
 }

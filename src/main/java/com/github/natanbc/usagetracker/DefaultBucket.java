@@ -10,10 +10,16 @@ import java.util.function.ToLongFunction;
  */
 @SuppressWarnings("unused")
 public enum DefaultBucket implements Bucket {
-    SECOND(UsageTracker::secondUsages),
-    MINUTE(UsageTracker::minuteUsages),
-    HOUR(UsageTracker::hourlyUsages),
-    DAY(UsageTracker::dailyUsages),
+    LAST_SECOND(UsageTracker::secondUsages),
+    LAST_MINUTE(UsageTracker::minuteUsages),
+    LAST_5_MINUTES(tracker -> tracker.hourBuffer().sumLast(5)),
+    LAST_15_MINUTES(tracker -> tracker.hourBuffer().sumLast(15)),
+    LAST_30_MINUTES(tracker -> tracker.hourBuffer().sumLast(30)),
+    LAST_HOUR(UsageTracker::hourlyUsages),
+    LAST_2_HOURS(tracker -> tracker.dayBuffer().sumLast(2)),
+    LAST_6_HOURS(tracker -> tracker.dayBuffer().sumLast(6)),
+    LAST_12_HOURS(tracker -> tracker.dayBuffer().sumLast(12)),
+    LAST_DAY(UsageTracker::dailyUsages),
     TOTAL(UsageTracker::totalUsages);
 
     private final ToLongFunction<UsageTracker<?>> amountFunction;

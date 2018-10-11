@@ -7,7 +7,7 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '2.0.1'
 }
 
-def versionObj = new Version(major: 0, minor: 2, revision: 0)
+def versionObj = new Version(major: 0, minor: 3, revision: 0)
 
 group 'com.github.natanbc'
 version "${versionObj}"
@@ -37,6 +37,17 @@ compileJava {
     options.encoding = 'UTF-8'
 
     dependsOn sourcesForRelease
+}
+
+javadoc {
+    def dir = new File(System.getenv("JAVA_HOME"), "bin")
+    def file = new File(dir, "javadoc")
+    if(!file.isFile()) file = new File(dir, "javadoc.exe")
+    if(file.isFile()) {
+        executable = file.getAbsolutePath()
+        options.addBooleanOption('html5', true)
+    }
+    options.addStringOption("tag", "implNote:a:Implementation Note:")
 }
 
 jar {

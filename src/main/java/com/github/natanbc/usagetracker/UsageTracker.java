@@ -1,12 +1,13 @@
 package com.github.natanbc.usagetracker;
 
+import com.github.natanbc.usagetracker.ringbuffer.RingBuffer;
+
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -19,26 +20,42 @@ import java.util.concurrent.atomic.AtomicLong;
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class UsageTracker<K> {
     protected final AtomicLong second = new AtomicLong();
-    protected final CircularLongArray minute = new CircularLongArray(60);
-    protected final CircularLongArray hour = new CircularLongArray(60);
-    protected final CircularLongArray day = new CircularLongArray(24);
     protected final AtomicLong total = new AtomicLong();
     protected final ConcurrentHashMap<K, UsageTracker<K>> children = new ConcurrentHashMap<>();
+    protected final TrackerGroup<K> group;
     protected final UsageTracker<K> parent;
     protected final K key;
     protected final boolean recursiveIncrement;
+    protected final RingBuffer minute;
+    protected final RingBuffer hour;
+    protected final RingBuffer day;
 
     /**
      * Creates a new usage tracker with a given parent and identifier key.
      *
+     * @param group The group this tracker belongs to.
      * @param parent Parent for this tracker. May be null.
      * @param key Key for this tracker. Cannot be null.
      * @param recursiveIncrement Whether or not to recursively increment parents, until the root tracker is hit.
      */
-    protected UsageTracker(@Nullable UsageTracker<K> parent, @Nonnull K key, boolean recursiveIncrement) {
+    protected UsageTracker(@Nonnull final TrackerGroup<K> group, @Nullable UsageTracker<K> parent, @Nonnull K key, boolean recursiveIncrement) {
+        this.group = group;
         this.parent = parent;
         this.key = Objects.requireNonNull(key, "Key may not be null");
         this.recursiveIncrement = recursiveIncrement;
+        this.minute = group.createRingBuffer(60);
+        this.hour = group.createRingBuffer(60);
+        this.day = group.createRingBuffer(24);
+    }
+
+    /**
+     * Returns the group this tracker belongs to.
+     *
+     * @return This tracker's group.
+     */
+    @Nonnegative
+    public TrackerGroup<K> getGroup() {
+        return group;
     }
 
     /**
@@ -46,7 +63,7 @@ public class UsageTracker<K> {
      *
      * @return This tracker's parent. May be null.
      */
-    @Nonnull
+    @Nullable
     public UsageTracker<K> getParent() {
         return parent;
     }
@@ -81,7 +98,7 @@ public class UsageTracker<K> {
      */
     @Nonnull
     public UsageTracker<K> child(K key) {
-        return children.computeIfAbsent(key, unused->new UsageTracker<>(this, key, recursiveIncrement));
+        return children.computeIfAbsent(key, k -> group.createTracker(this, key));
     }
 
     /**
@@ -105,13 +122,35 @@ public class UsageTracker<K> {
     }
 
     /**
+     * Returns the buffer containing the usages in the last minute.
+     * Each entry corresponds to a second.
+     *
+     * @return The last minute buffer.
+     */
+    @Nonnull
+    public RingBuffer minuteBuffer() {
+        return minute;
+    }
+
+    /**
      * Returns the number of usages registered in the last minute.
      *
      * @return The number of usages in the last minute.
      */
     @Nonnegative
     public long minuteUsages() {
-        return minute.sum() + secondUsages();
+        return minute.sum() + second.get();
+    }
+
+    /**
+     * Returns the buffer containing the usages in the last hour.
+     * Each entry corresponds to a minute.
+     *
+     * @return The last hour buffer.
+     */
+    @Nonnull
+    public RingBuffer hourBuffer() {
+        return hour;
     }
 
     /**
@@ -121,7 +160,18 @@ public class UsageTracker<K> {
      */
     @Nonnegative
     public long hourlyUsages() {
-        return hour.sum() + minuteUsages();
+        return hour.sumLast(59) + minute.sum() + second.get();
+    }
+
+    /**
+     * Returns the buffer containing the usages in the last day.
+     * Each entry corresponds to an hour.
+     *
+     * @return The last day buffer.
+     */
+    @Nonnull
+    public RingBuffer dayBuffer() {
+        return day;
     }
 
     /**
@@ -131,7 +181,7 @@ public class UsageTracker<K> {
      */
     @Nonnegative
     public long dailyUsages() {
-        return day.sum() + hourlyUsages();
+        return day.sumLast(23) + hour.sumLast(59) + minute.sum() + second.get();
     }
 
     /**
@@ -166,64 +216,5 @@ public class UsageTracker<K> {
     protected void rollHour() {
         day.put(hour.sum());
         children.values().forEach(UsageTracker::rollHour);
-    }
-
-    /**
-     * Create a new circular long array with a given size.
-     *
-     * <br>A circular long array replaces the oldest value with a new one when requested, in addition to having a helper
-     * method to calculate the sum of all elements.
-     *
-     * @param size The required size for the array.
-     *
-     * @return A new array of the given size. Never null.
-     */
-    @Nonnull
-    protected CircularLongArray createArray(@Nonnegative int size) {
-        return new CircularLongArray(size);
-    }
-
-    /**
-     * A circular long array replaces the oldest value with a new one when requested, in addition to having a helper
-     * method to calculate the sum of all elements.
-     */
-    protected static class CircularLongArray {
-        protected final AtomicInteger index = new AtomicInteger();
-        protected final int size;
-        protected final long[] array;
-
-        /**
-         * Creates a new array with the given size.
-         *
-         * @param size The needed size.
-         */
-        protected CircularLongArray(@Nonnegative int size) {
-            this.size = size;
-            this.array = new long[size];
-        }
-
-        /**
-         * Adds a new value to this array, replacing the oldest value present.
-         *
-         * @param value The value to insert.
-         */
-        protected void put(@Nonnegative long value) {
-            array[index.getAndUpdate(v->(v + 1) % size)] = value;
-        }
-
-        /**
-         * Returns the sum of all the elements in this array.
-         *
-         * @return The sum of all the elements in this array.
-         */
-        @Nonnegative
-        protected long sum() {
-            int idx = index.get();
-            long sum = 0;
-            for(int i = 0; i < size; i++) {
-                sum += array[(i + idx) % size];
-            }
-            return sum;
-        }
     }
 }
